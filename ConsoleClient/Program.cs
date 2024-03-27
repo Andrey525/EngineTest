@@ -29,20 +29,57 @@ namespace EngineTest
 				break;
 			}
 
-			EngineTestOverheat test = new EngineTestOverheat(new Engine());
-			var result = (EngineTestOverheatResult)await test.Run(ambientTemperature);
-			if (result.IsEngineOverheated)
+			var engineData = new EngineData
 			{
-				Console.WriteLine($"Engine is overheated: ellapsed time {result.EllapsedTimeBeforeOverheat}");
+				I = 10,
+				Hm = 0.01,
+				Hv = 0.0001,
+				C = 0.1,
+				Moments = [20, 75, 100, 105, 75, 0],
+				СrankshaftSpeeds = [0, 75, 150, 200, 250, 300],
+				CriticalTemperature = 110
+			};
+
+			int maxRunTime = 10;
+
+			/* First test */
+			try
+			{
+				var test = new EngineTestOverheat(new Engine(engineData), maxRunTime);
+
+				Console.WriteLine($"Max test run time is {maxRunTime} seconds. Please wait!");
+
+				var result = (EngineTestOverheatResult)await test.Run(ambientTemperature);
+
+				if (result.IsEngineOverheated)
+				{
+					Console.WriteLine($"Engine is overheated: ellapsed time {result.EllapsedTimeBeforeOverheat:f}");
+				}
+				else
+				{
+					Console.WriteLine($"Engine is not overheated: ellapsed time {result.EllapsedTimeBeforeOverheat:f}");
+				}
 			}
-			else
+			catch (Exception ex)
 			{
-				Console.WriteLine($"Engine is not overheated: ellapsed time {result.EllapsedTimeBeforeOverheat}");
+				Console.WriteLine("Error: " + ex.Message);
 			}
 
-			var test2 = new EngineMaxPowerTest(new Engine());
-			var result2 = (EngineMaxPowerTestResult)await test2.Run(ambientTemperature);
-			Console.WriteLine($"Max Power {result2.MaxPower}");
+			/* Second test */
+			try
+			{
+				var test = new EngineMaxPowerTest(new Engine(engineData), maxRunTime);
+
+				Console.WriteLine($"Max test run time is {maxRunTime} seconds. Please wait!");
+
+				var result = (EngineMaxPowerTestResult)await test.Run(ambientTemperature);
+
+				Console.WriteLine($"Max Power: {result.MaxPower:f}; Сrankshaft Speed: {result.СrankshaftSpeed:f}");
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine("Error: " + ex.Message);
+			}
 		}
 	}
 }

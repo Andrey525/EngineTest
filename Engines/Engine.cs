@@ -1,13 +1,20 @@
 ﻿namespace Engines
 {
+	public struct EngineData
+	{
+		public double CriticalTemperature { get; init; }
+		public double I { get; init; }
+		public double Hm { get; init; }
+		public double Hv { get; init; }
+		public double C { get; init; }
+		public IReadOnlyList<double> Moments { get; init; }
+		public IReadOnlyList<double> СrankshaftSpeeds { get; init; }
+	}
+
+
 	public class Engine : AbstractEngine, IDisposable
 	{
-		private const double I = 10;
-		private const double Hm = 0.01;
-		private const double Hv = 0.0001;
-		private const double C = 0.1;
-		private IReadOnlyList<double> Moments = [20, 75, 100, 105, 75, 0];
-		private IReadOnlyList<double> СrankshaftSpeeds = [0, 75, 150, 200, 250, 300];
+		private readonly EngineData _engineData;
 
 		public override event Action? CriticalTemperatureCallback;
 		public override event Action? MaxCrankshaftRotationSpeedCallback;
@@ -16,7 +23,7 @@
 		{
 			get
 			{
-				return CurrentMoment * Hm + CurrentСrankshaftSpeed * CurrentСrankshaftSpeed * Hv;
+				return CurrentMoment * _engineData.Hm + CurrentСrankshaftSpeed * CurrentСrankshaftSpeed * _engineData.Hv;
 			}
 		}
 
@@ -24,15 +31,28 @@
 		{
 			get
 			{
-				return C * (AmbientTemperature - CurrentTemperature);
+				return _engineData.C * (AmbientTemperature - CurrentTemperature);
 			}
 		}
 
-		public Engine()
+		private double SpeedUp
 		{
-			CurrentMoment = Moments[0];
-			CurrentСrankshaftSpeed = СrankshaftSpeeds[0];
-			CriticalTemperature = 110;
+			get
+			{
+				return CurrentMoment / _engineData.I;
+			}
+		}
+
+		public Engine(EngineData engineData)
+		{
+			if (engineData.Moments.Count != engineData.СrankshaftSpeeds.Count)
+			{
+				throw new ArgumentException("Moments Count must be equal СrankshaftSpeeds Count");
+			}
+			_engineData = engineData;
+			CurrentMoment = _engineData.Moments[0];
+			CurrentСrankshaftSpeed = _engineData.СrankshaftSpeeds[0];
+			CriticalTemperature = _engineData.CriticalTemperature;
 		}
 
 		public override async Task Run(CancellationToken token)
@@ -44,36 +64,32 @@
 				int index = 0;
 				while (true)
 				{
-					double a = CurrentMoment / I;
+					CurrentСrankshaftSpeed += SpeedUp;
 
-					CurrentСrankshaftSpeed += a;
+					if (index < _engineData.Moments.Count - 2 &&
+						CurrentСrankshaftSpeed >= _engineData.СrankshaftSpeeds[index + 1])
+					{
+						index++;
+					}
 
-					if (index < Moments.Count - 2)
-						index += CurrentСrankshaftSpeed < СrankshaftSpeeds[index + 1] ? 0 : 1;
-
-					double delta1 = CurrentСrankshaftSpeed - СrankshaftSpeeds[index];
-					double delta2 = СrankshaftSpeeds[index + 1] - СrankshaftSpeeds[index];
-					double delta3 = Moments[index + 1] - Moments[index];
-					CurrentMoment = delta1 / delta2 * delta3 + Moments[index];
+					double delta1 = CurrentСrankshaftSpeed - _engineData.СrankshaftSpeeds[index];
+					double delta2 = _engineData.СrankshaftSpeeds[index + 1] - _engineData.СrankshaftSpeeds[index];
+					double delta3 = _engineData.Moments[index + 1] - _engineData.Moments[index];
+					CurrentMoment = delta1 / delta2 * delta3 + _engineData.Moments[index];
 
 					CurrentTemperature += Vc + Vh;
 
-
-					if (CurrentTemperature > CriticalTemperature)
+					if (IsOverheated)
 					{
 						/* Критическая температура */
-						/*Console.WriteLine($"Критическая температура");*/
 						CriticalTemperatureCallback?.Invoke();
 					}
 
-					if (CurrentСrankshaftSpeed >= СrankshaftSpeeds.Last() - 1)
+					if (CurrentСrankshaftSpeed >= _engineData.СrankshaftSpeeds.Last() - 1)
 					{
 						/* Двигатель дошел до максимальных оборотов, погрешность 1 */
-						/*Console.WriteLine($"Двигатель дошел до максимальных оборотов, погрешность ");*/
 						MaxCrankshaftRotationSpeedCallback?.Invoke();
 					}
-
-					/*Console.WriteLine($"temp {CurrentTemperature}; speed {CurrentСrankshaftSpeed}; moment {CurrentMoment}");*/
 
 					if (token.IsCancellationRequested)
 						return;

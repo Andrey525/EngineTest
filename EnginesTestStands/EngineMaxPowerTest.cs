@@ -3,7 +3,7 @@ namespace EnginesTestStands
 {
 	public class EngineMaxPowerTest : EngineTestBase
 	{
-		public EngineMaxPowerTest(AbstractEngine engine) : base(engine) { }
+		public EngineMaxPowerTest(AbstractEngine engine, int maxRunTime) : base(engine, maxRunTime) { }
 
 		public override async Task<object> Run(double ambientTemperature)
 		{
@@ -13,17 +13,22 @@ namespace EnginesTestStands
 
 			var task = TestEngine.Run(_token);
 
-			double maxPower = 0;
 
+			double maxPower = 0;
+			double crankshaftSpeed = 0;
 			while (!_isCancelled)
 			{
 				var power = СalculatePower();
 				if (power > maxPower)
+				{
 					maxPower = power;
+					crankshaftSpeed = TestEngine.CurrentСrankshaftSpeed;
+				}
 
 				/* Будем проверять раз в t времени */
 				Thread.Sleep(50);
 			}
+
 			await task;
 
 			TestEngine.CriticalTemperatureCallback -= TaskCancelHandler;
@@ -32,8 +37,9 @@ namespace EnginesTestStands
 
 			return new EngineMaxPowerTestResult
 			{
-				IsEngineOverheated = TestEngine.CurrentTemperature >= TestEngine.CriticalTemperature,
-				MaxPower = maxPower
+				IsEngineOverheated = TestEngine.IsOverheated,
+				MaxPower = maxPower,
+				СrankshaftSpeed = crankshaftSpeed
 			};
 		}
 
@@ -53,5 +59,6 @@ namespace EnginesTestStands
 	{
 		public bool IsEngineOverheated { get; init; }
 		public double MaxPower { get; init; }
+		public double СrankshaftSpeed { get; init; }
 	}
 }

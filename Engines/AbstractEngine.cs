@@ -8,6 +8,14 @@
 		public double CurrentMoment { get; protected set; }
 		public double CurrentСrankshaftSpeed { get; protected set; }
 
+		public bool IsOverheated
+		{
+			get
+			{
+				return CurrentTemperature >= CriticalTemperature;
+			}
+		}
+
 		public abstract double Vh { get; }
 		public abstract double Vc { get; }
 

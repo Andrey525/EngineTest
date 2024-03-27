@@ -4,7 +4,7 @@ namespace EnginesTestStands
 {
 	public class EngineTestOverheat : EngineTestBase
 	{
-		public EngineTestOverheat(AbstractEngine engine) : base(engine) { }
+		public EngineTestOverheat(AbstractEngine engine, int maxRunTime) : base(engine, maxRunTime) { }
 		public override async Task<object> Run(double ambientTemperature)
 		{
 			TestEngine.AmbientTemperature = ambientTemperature;
@@ -20,7 +20,7 @@ namespace EnginesTestStands
 
 			return new EngineTestOverheatResult
 			{
-				IsEngineOverheated = TestEngine.CurrentTemperature >= TestEngine.CriticalTemperature,
+				IsEngineOverheated = TestEngine.IsOverheated,
 				EllapsedTimeBeforeOverheat = watch.Elapsed.TotalSeconds
 			};
 		}
@@ -30,6 +30,5 @@ namespace EnginesTestStands
 	{
 		public bool IsEngineOverheated { get; init; }
 		public double EllapsedTimeBeforeOverheat { get; init; }
-
 	}
 }
